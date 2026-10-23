@@ -1,9 +1,13 @@
 const fp = require('fastify-plugin');
+const pick = require('lodash/pick');
 const schema = require('../schema/lang-lib');
 const { empty } = require('../schema/response');
 
 const TAG = '国际化管理后台-语言库';
 const RUNTIME_TAG = '国际化-运行时';
+
+// save 只透传客户端可修改的字段，避免 userId、deletedAt 等未声明字段写进数据库
+const SAVE_FIELDS = ['id', 'target', 'status'];
 
 module.exports = fp(async (fastify, options) => {
   const { services } = fastify[options.name];
@@ -60,13 +64,13 @@ module.exports = fp(async (fastify, options) => {
       schema: {
         tags: [TAG],
         summary: '保存语言词条',
-        description: '修改词条译文与状态；命名空间、编码、语言不可修改。译文变化时默认语言词条直接审核通过，其他语言重置为待审核并清空审核备注',
+        description: '修改词条译文与状态；命名空间、编码、语言不可修改。译文变化时默认语言词条直接审核通过，其他语言重置为待审核并清空审核备注；未声明的字段（如 userId、reviewStatus）会被忽略',
         body: schema.saveBody,
         response: empty('保存成功，返回空对象')
       }
     },
     async request => {
-      await services.langLib.save(request.userInfo || {}, request.body);
+      await services.langLib.save(request.userInfo || {}, pick(request.body, SAVE_FIELDS));
       return {};
     }
   );

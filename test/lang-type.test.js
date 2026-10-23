@@ -241,6 +241,34 @@ describe('@kne/fastify-intl-admin - langType', function () {
       expect(detail.code).to.equal('zh-CN');
       expect(detail.description).to.equal('updated');
     });
+
+    it('POST /lang-type/save should ignore undeclared fields but save declared ones', async () => {
+      fastify = await createFastify();
+      fastify.register(require('../libs/controllers/lang-type'), fastify['intl-admin'].options);
+      await fastify.ready();
+      const { langType } = fastify['intl-admin'].services;
+
+      const created = await langType.create({ id: 'owner' }, { name: '中文', code: 'zh-CN' });
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/api/v1/intl-admin/lang-type/save',
+        payload: {
+          id: created.id,
+          name: '简体中文',
+          params: 'count',
+          description: 'updated',
+          status: 'closed',
+          userId: 'attacker',
+          deletedAt: '2000-01-01T00:00:00.000Z'
+        }
+      });
+      expect(response.statusCode).to.equal(200);
+
+      const detail = await langType.detail({}, { id: created.id });
+      expect(detail).to.include({ name: '简体中文', params: 'count', description: 'updated', status: 'closed' });
+      expect(detail.userId).to.equal('owner');
+      expect(detail.deletedAt).to.equal(undefined);
+    });
   });
 
   describe('setStatus', () => {
