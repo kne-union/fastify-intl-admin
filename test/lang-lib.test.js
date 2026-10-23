@@ -414,6 +414,46 @@ describe('@kne/fastify-intl-admin - langLib', function () {
       expect(detail.target).to.equal('Hi');
       expect(detail.reviewStatus).to.equal('pending');
     });
+
+    it('POST /lang-lib/save should ignore undeclared fields but save target and status', async () => {
+      fastify = await createFastify();
+      fastify.register(require('../libs/controllers/lang-lib'), fastify['intl-admin'].options);
+      await fastify.ready();
+      const services = fastify['intl-admin'].services;
+      await seedLangTypes(services);
+
+      const [row] = await services.langLib.addPackage(
+        {},
+        {
+          namespace: 'global',
+          code: 'Hello',
+          locales: ['en-US'],
+          aiGenerate: false,
+          targets: { 'en-US': 'Hello' }
+        }
+      );
+
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/api/v1/intl-admin/lang-lib/save',
+        payload: {
+          id: row.id,
+          target: 'Hi',
+          status: 'closed',
+          userId: 'attacker',
+          deletedAt: '2000-01-01T00:00:00.000Z',
+          reviewStatus: 'approved'
+        }
+      });
+      expect(response.statusCode).to.equal(200);
+
+      const detail = await services.langLib.detail({}, { id: row.id });
+      expect(detail.target).to.equal('Hi');
+      expect(detail.status).to.equal('closed');
+      expect(detail.reviewStatus).to.equal('pending');
+      expect(detail.userId).to.not.equal('attacker');
+      expect(detail.deletedAt).to.equal(undefined);
+    });
   });
 
   describe('setStatus / remove / review', () => {
