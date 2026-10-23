@@ -1,6 +1,6 @@
 {
   "name": "@kne/fastify-intl-admin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Fastify 业务插件：国际化语言类型与语言库管理（lang-type / lang-lib）",
   "main": "index.js",
   "scripts": {
